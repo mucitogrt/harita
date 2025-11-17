@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Konum Harita ve Turistik Yerler</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+  }
+
+  .main-container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    color: white;
+    margin-bottom: 30px;
+    animation: slideDown 0.6s ease-out;
+  }
+
+  .header h1 {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    font-weight: 700;
+  }
+
+  .header p {
+    font-size: 1.1em;
+    opacity: 0.95;
+  }
+
+  .content-wrapper {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
+    margin-bottom: 30px;
+  }
+
+  .card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    animation: fadeInUp 0.6s ease-out;
+  }
+
+  .card:nth-child(2) {
+    animation-delay: 0.1s;
+  }
+
+  .search-section h2 {
+    color: #667eea;
+    margin-bottom: 20px;
+    font-size: 1.5em;
+  }
+
+  .input-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+  }
+
+  #locationInput {
+    flex: 1;
+    padding: 12px 16px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 1em;
+    transition: all 0.3s ease;
+  }
+
+  #locationInput:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+
+  .btn-show {
+    padding: 12px 28px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1em;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  }
+
+  .btn-show:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+  }
+
+  .btn-show:active {
+    transform: translateY(0);
+  }
+
+  #status {
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: #f0f4ff;
+    color: #667eea;
+    font-weight: 500;
+    margin-top: 10px;
+    min-height: 20px;
+    animation: fadeIn 0.3s ease;
+  }
+
+  #status.error {
+    background: #ffe0e0;
+    color: #d32f2f;
+  }
+
+  #status.success {
+    background: #e0f0e0;
+    color: #388e3c;
+  }
+
+  #map {
+    height: 400px;
+    width: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    animation: fadeIn 0.5s ease;
+  }
+
+  .map-container {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    display: none;
+    animation: fadeInUp 0.6s ease-out 0.2s both;
+    margin-bottom: 30px;
+  }
+
+  .places-section {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    animation: fadeInUp 0.6s ease-out 0.3s both;
+  }
+
+  .places-section h2 {
+    color: #667eea;
+    margin-bottom: 20px;
+    font-size: 1.5em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .places-section h2 i {
+    color: #764ba2;
+  }
+
+  #places-list {
+    list-style: none;
+  }
+
+  #places-list li {
+    padding: 12px 16px;
+    margin: 8px 0;
+    background: #f8f9fa;
+    border-left: 4px solid #667eea;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: #333;
+    font-weight: 500;
+  }
+
+  #places-list li:hover {
+    background: #e8ecff;
+    border-left-color: #764ba2;
+    transform: translateX(5px);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+  }
+
+  #places-list li i {
+    margin-right: 8px;
+    color: #764ba2;
+  }
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @media (max-width: 768px) {
+    .content-wrapper {
+      grid-template-columns: 1fr;
+    }
+
+    .header h1 {
+      font-size: 1.8em;
+    }
+
+    #map {
+      height: 300px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="main-container">
+  <div class="header">
+    <h1><i class="fas fa-map-location-dot"></i> Konum Haritası</h1>
+    <p>Herhangi bir yerleşim yerini arayın ve yakındaki turistik yerleri keşfedin</p>
+  </div>
+
+  <div class="content-wrapper">
+    <div class="card search-section">
+      <h2><i class="fas fa-search"></i> Konum Ara</h2>
+      <div class="input-group">
+        <input id="locationInput" type="text" placeholder="Örn: Ankara, İstanbul, Kapadokya..." />
+        <button class="btn-show" onclick="showLocation()"><i class="fas fa-search"></i> Göster</button>
+      </div>
+      <p id="status"></p>
+    </div>
+
+    <div class="card">
+      <h2><i class="fas fa-info-circle"></i> Bilgilendirme</h2>
+      <p style="color: #666; line-height: 1.6;">
+        Türkiye'nin herhangi bir bölgesinde konum arayın. Uygulama, aradığınız konumun haritasını gösterecek ve yakındaki önemli turistik yerleri listelecektir.
+      </p>
+    </div>
+  </div>
+
+  <div class="map-container" id="mapWrapper">
+    <div id="map"></div>
+  </div>
+
+  <div class="places-section">
+    <h2><i class="fas fa-landmark"></i> Turistik Yerler</h2>
+    <ul id="places-list">
+      <li style="padding: 20px; text-align: center; color: #999; border: none;">Bir konum seçin ve haritayı görüntüleyin</li>
+    </ul>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  var map = L.map('map').setView([39.925, 32.8369], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+  var markers = [];
+
+  function showLocation() {
+    var inputEl = document.getElementById('locationInput');
+    if (!inputEl) { 
+      alert('Konum inputu bulunamadı.'); 
+      return; 
+    }
+    const place = inputEl.value.trim();
+    if (!place) { 
+      alert('Lütfen bir konum girin.'); 
+      return; 
+    }
+
+    updateStatus('Konum aranıyor...', 'searching');
+
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(place)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.length === 0) { 
+          updateStatus('Konum bulunamadı. Başka bir ad deneyin.', 'error');
+          return;
+        }
+        const lat = data[0].lat;
+        const lon = data[0].lon;
+        
+        document.getElementById('mapWrapper').style.display = 'block';
+        
+        setTimeout(() => {
+          map.setView([lat, lon], 14);
+          map.invalidateSize();
+
+          markers.forEach(m => map.removeLayer(m));
+          markers = [];
+
+          const mainMarker = L.marker([lat, lon], {
+            icon: L.icon({
+              iconUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23667eea" width="32" height="32"><path d="M12 2C6.48 2 2 6.48 2 12c0 7 10 13 10 13s10-6 10-13c0-5.52-4.48-10-10-10zm0 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>',
+              iconSize: [32, 32],
+              iconAnchor: [16, 32]
+            })
+          }).addTo(map).bindPopup(place);
+          markers.push(mainMarker);
+
+          loadTouristPlaces(lat, lon);
+          updateStatus('✓ Konum bulundu.', 'success');
+        }, 100);
+      })
+      .catch(err => updateStatus('Bir hata oluştu. Lütfen tekrar deneyin.', 'error'));
+  }
+
+  function updateStatus(msg, type) {
+    const status = document.getElementById('status');
+    status.textContent = msg;
+    status.className = type;
+  }
+
+  function loadTouristPlaces(lat, lon) {
+    fetch(`https://tr.wikipedia.org/w/api.php?action=query&list=geosearch&gscoord=${lat}|${lon}&gsradius=10000&gslimit=10&format=json&origin=*`)
+      .then(res => res.json())
+      .then(data => {
+        const ul = document.getElementById('places-list');
+        ul.innerHTML = '';
+        const places = data.query.geosearch;
+        if (places.length === 0) {
+          ul.innerHTML = '<li style="border:none; text-align: center; color: #999;">Bu bölgede turistik yer bulunamadı.</li>';
+          return;
+        }
+        places.forEach(p => {
+          const li = document.createElement('li');
+          li.innerHTML = `<i class="fas fa-location-dot"></i> ${p.title}`;
+          li.onclick = () => {
+            fetchWikipediaExcerpt(p);
+          };
+          ul.appendChild(li);
+        });
+      })
+      .catch(err => console.warn('Turistik yerler yüklenemedi', err));
+  }
+
+  function fetchWikipediaExcerpt(place) {
+    fetch(`https://tr.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=true&exintro=true&titles=${encodeURIComponent(place.title)}&format=json&origin=*`)
+      .then(res => res.json())
+      .then(data => {
+        const pages = data.query.pages;
+        const pageId = Object.keys(pages)[0];
+        const excerpt = pages[pageId].extract || 'Bilgi bulunamadı.';
+        
+        const popupWin = window.open('', '_blank', 'width=650,height=750,scrollbars=yes');
+        popupWin.document.write(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+            <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body { font-family: 'Segoe UI', sans-serif; background: #f5f5f5; }
+              .popup-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+              .popup-header h2 { margin: 0; font-size: 1.8em; }
+              .popup-content { padding: 25px; max-height: 500px; overflow-y: auto; }
+              .location-info { background: #e8ecff; padding: 12px 16px; border-radius: 8px; color: #667eea; font-weight: 600; margin-bottom: 20px; border-left: 4px solid #667eea; }
+              #popupMap { width: 100%; height: 280px; margin: 20px 0; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+              .excerpt-text { color: #333; line-height: 1.8; font-size: 0.95em; margin: 15px 0; text-align: justify; }
+              .popup-footer { padding: 15px 25px; background: #f9f9f9; border-top: 1px solid #eee; text-align: center; font-size: 0.85em; color: #999; }
+            </style>
+          </head>
+          <body>
+            <div class="popup-header">
+              <h2>${place.title}</h2>
+            </div>
+            <div class="popup-content">
+              <div class="location-info">📍 Konum: ${place.lat.toFixed(5)}, ${place.lon.toFixed(5)}</div>
+              <div id="popupMap"></div>
+              <div class="excerpt-text">${excerpt}</div>
+            </div>
+            <div class="popup-footer">
+              📚 Wikipedia'dan alınan bilgiler
+            </div>
+            <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
+            <script>
+              setTimeout(() => {
+                const popupMap = L.map('popupMap').setView([${place.lat}, ${place.lon}], 14);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(popupMap);
+                L.marker([${place.lat}, ${place.lon}], {
+                  icon: L.icon({
+                    iconUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23667eea" width="32" height="32"><path d="M12 2C6.48 2 2 6.48 2 12c0 7 10 13 10 13s10-6 10-13c0-5.52-4.48-10-10-10zm0 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>',
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 32]
+                  })
+                }).addTo(popupMap).bindPopup('${place.title}').openPopup();
+                popupMap.invalidateSize();
+              }, 200);
+            <\/script>
+          </body>
+          </html>
+        `);
+        popupWin.document.close();
+      })
+      .catch(err => {
+        alert('Bilgi yüklenirken hata oluştu: ' + err.message);
+      });
+  }
+
+  // Enter tuşu ile arama yapma
+  document.getElementById('locationInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') showLocation();
+  });
+</script>
+
+</body>
+</html>
